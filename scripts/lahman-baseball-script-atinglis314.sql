@@ -104,15 +104,35 @@ FROM schools
 WHERE schoolname LIKE 'Vanderbilt%';
 --Vanderbilt's schoolid is 'vandy'
 
+--understanding the salaries table
 SELECT *
 FROM salaries;
 
-SELECT p.playerid, p.nameFIRST, p.nameLAST, s.sum()
---player id, player first name, player last name, total salary
+--trying a full query with a CTE
+WITH total_salaries AS (
+SELECT playerID, sum(salary) AS total_salary
+FROM salaries
+GROUP BY playerID)
+
+SELECT DISTINCT p.playerid, p.nameFIRST, p.nameLAST, ts.total_salary
 FROM people AS p
 LEFT JOIN collegeplaying AS c
 ON p.playerid = c.playerid
-LEFT JOIN salaries AS s
-ON p.playerid = s.playerid
-WHERE schoolid = 'vandy'
+LEFT JOIN total_salaries AS ts
+ON p.playerid = ts.playerid
+WHERE schoolid = 'vandy' AND total_salary IS NOT null
+ORDER BY total_salary DESC;
+
+--ANSWER: David Price (playerID priceda01) earned the most money in tha majors of all the Vanderbilt players, earning a total of $81,851,296.00
+
+
+
+
+
+--QUESTION 4: Using the fielding table, group players into three groups based on their position: label players with position OF as "Outfield", those with position "SS", "1B", "2B", and "3B" as "Infield", and those with position "P" or "C" as "Battery". Determine the number of putouts made by each of these three groups in 2016.
+
+
+
+
+
 
