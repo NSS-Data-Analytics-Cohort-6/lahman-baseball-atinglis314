@@ -204,7 +204,170 @@ ORDER BY category DESC;
 
 --amanda just said to use the teams table, rather than pitching? we shall see lol
 
+SELECT *
+FROM pitching;
+
+--query planning: SELECT decade (case statement), average strikeouts per game (avg(sum SO / count game)), from pitching, group by decade? with a running-difference window function?
+
+SELECT
+	CASE WHEN yearid BETWEEN 1920 AND 1929 THEN '1920s'
+		WHEN yearid BETWEEN 1930 AND 1939 THEN '1930s'
+		WHEN yearid BETWEEN 1940 AND 1949 THEN '1940s'
+		WHEN yearid BETWEEN 1950 AND 1959 THEN '1950s'
+		WHEN yearid BETWEEN 1960 AND 1969 THEN '1960s'
+		WHEN yearid BETWEEN 1970 AND 1979 THEN '1970s'
+		WHEN yearid BETWEEN 1980 AND 1989 THEN '1980s'
+		WHEN yearid BETWEEN 1990 AND 1999 THEN '1990s'
+		WHEN yearid BETWEEN 2000 AND 2009 THEN '2000s'
+		WHEN yearid BETWEEN 2010 AND 2019 THEN '2010s'
+		ELSE null END AS decade,
+	ROUND(AVG(so/g),2) AS strikeouts_per_game,
+	LAG(ROUND(AVG(so/g),2)) OVER (ORDER BY decade) AS SO_difference,
+	ROUND(AVG(hr/g),2) AS homeruns_per_game,
+	LAG(ROUND(AVG(hr/g),2)) OVER (ORDER BY decade) AS hr_difference
+FROM pitching
+WHERE yearid >= 1920
+GROUP BY decade
+ORDER BY decade ASC;
+
+--cannot partition by case statement in same select, trying a CTE
+
+WITH dec AS 
+	(SELECT yearid,
+	 CASE WHEN yearid BETWEEN 1920 AND 1929 THEN '1920s'
+		WHEN yearid BETWEEN 1930 AND 1939 THEN '1930s'
+		WHEN yearid BETWEEN 1940 AND 1949 THEN '1940s'
+		WHEN yearid BETWEEN 1950 AND 1959 THEN '1950s'
+		WHEN yearid BETWEEN 1960 AND 1969 THEN '1960s'
+		WHEN yearid BETWEEN 1970 AND 1979 THEN '1970s'
+		WHEN yearid BETWEEN 1980 AND 1989 THEN '1980s'
+		WHEN yearid BETWEEN 1990 AND 1999 THEN '1990s'
+		WHEN yearid BETWEEN 2000 AND 2009 THEN '2000s'
+		WHEN yearid BETWEEN 2010 AND 2019 THEN '2010s'
+		ELSE null END AS decade
+	FROM pitching
+	WHERE yearid >= 1920)
+SELECT
+	decade,
+	ROUND(AVG(so/g),2) AS strikeouts_per_game,
+	LAG(ROUND(AVG(so/g),2)) OVER (ORDER BY decade) AS SO_difference,
+	ROUND(AVG(hr/g),2) AS homeruns_per_game,
+	LAG(ROUND(AVG(hr/g),2)) OVER (ORDER BY decade) AS hr_difference
+FROM pitching
+WHERE yearid >= 1920
+GROUP BY decade
+ORDER BY decade ASC;
+
+--ok just kidding on the running difference idea, let's just eyeball it and move on
+
+SELECT
+	CASE WHEN yearid BETWEEN 1920 AND 1929 THEN '1920s'
+		WHEN yearid BETWEEN 1930 AND 1939 THEN '1930s'
+		WHEN yearid BETWEEN 1940 AND 1949 THEN '1940s'
+		WHEN yearid BETWEEN 1950 AND 1959 THEN '1950s'
+		WHEN yearid BETWEEN 1960 AND 1969 THEN '1960s'
+		WHEN yearid BETWEEN 1970 AND 1979 THEN '1970s'
+		WHEN yearid BETWEEN 1980 AND 1989 THEN '1980s'
+		WHEN yearid BETWEEN 1990 AND 1999 THEN '1990s'
+		WHEN yearid BETWEEN 2000 AND 2009 THEN '2000s'
+		WHEN yearid BETWEEN 2010 AND 2019 THEN '2010s'
+		ELSE null END AS decade,
+	ROUND(AVG(so/g),2) AS strikeouts_per_game,
+	ROUND(AVG(hr/g),2) AS homeruns_per_game
+FROM pitching
+WHERE yearid >= 1920
+GROUP BY decade
+ORDER BY decade ASC;
+
+--ANSWER: both metrics had an increasing trend on average, with some decades having significant jumps (1930s in SO, 1960s in SO, 1950s in HR, 2000s in HR) and both trends had a period of slight decline as well. A linear trendline would still have a positive slope in both categories
 
 
 
 
+
+
+--QUESTION 6: Find the player who had the most success stealing bases in 2016, where success is measured as the percentage of stolen base attempts which are successful. (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted at least 20 stolen bases.
+
+SELECT *
+FROM batting;
+
+--ok, let's give this a go with just the batting table. don't overcomplicate or overengineer this, Abi.
+
+SELECT
+	playerid, 
+	ROUND(((sb / (sb + cs)) * 100),2) AS perc_successful_sb
+FROM batting
+WHERE (sb + cs) >= 20
+ORDER BY perc_successful_sb DESC;
+
+--.....are there really only 100% and 0% successful people? certainly not...
+
+SELECT
+	playerid, 
+	((sb / (sb + cs)) * 100) AS perc_successful_sb
+FROM batting
+WHERE (sb + cs) >= 20
+ORDER BY perc_successful_sb DESC;
+
+--...no...
+
+SELECT
+	playerid, 
+	((sb / (sb + cs)) * 100) AS perc_successful_sb
+FROM batting
+ORDER BY perc_successful_sb DESC;
+
+--#div/0... ok let's try this
+
+SELECT
+	playerid,
+	sb,
+	cs,
+	((sb / (sb + cs)) * 100) AS perc_successful_sb
+FROM batting
+WHERE (sb + cs) >= 20
+ORDER BY perc_successful_sb DESC;
+
+--ok let's get rid of the * 100 and just look at decimals
+
+SELECT
+	playerid,
+	sb,
+	cs,
+	(sb/(sb+cs)) AS perc_successful_sb
+FROM batting
+WHERE (sb + cs) >= 20
+ORDER BY perc_successful_sb DESC;
+
+--OHHHHHHHH THEY'RE STORED AS INTEGERS OK ONE SEC
+
+SELECT
+	playerid,
+	sb,
+	cs,
+	ROUND((CAST(sb AS decimal)/(CAST(sb AS decimal)+CAST(cs AS decimal))*100),2) AS perc_successful_sb
+FROM batting
+WHERE (sb + cs) >= 20
+ORDER BY perc_successful_sb DESC;
+
+--BOOM BABY. Now let's add the name. and the 2016 thing, because I didn't read the whole question until now oops.
+
+SELECT
+	b.playerid,
+	nameFIRST, nameLAST,
+	sb,
+	cs,
+	ROUND((CAST(sb AS decimal)/(CAST(sb AS decimal)+CAST(cs AS decimal))*100),2) AS perc_successful_sb
+FROM batting AS b
+LEFT JOIN people AS p
+ON b.playerid = p.playerid
+WHERE (sb + cs) >= 20 AND yearid = 2016
+ORDER BY perc_successful_sb DESC;
+
+--ANSWER: Chris Owings was successful 91.3% of the time! Go Chris!!!
+
+
+
+
+
+--QUESTION 7: 
