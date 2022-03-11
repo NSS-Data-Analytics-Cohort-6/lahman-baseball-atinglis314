@@ -371,4 +371,96 @@ ORDER BY perc_successful_sb DESC;
 
 
 --QUESTION 7: From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+SELECT *
+FROM teams;
 
+--ok let's try this for the first section -- largest number of wins for a team that did not win
+SELECT 
+	teamid,
+	name,
+	w AS total_wins,
+	yearid
+FROM teams
+WHERE wswin = 'N' AND yearid BETWEEN 1970 AND 2016
+GROUP BY teamid, name, total_wins, yearid
+ORDER BY total_wins DESC;
+--SEATTLE MARINERS IN 2001 BAYBEEEE. 116 wins. Ballers
+
+--section two: smallest number of wins for a team that did win
+SELECT 
+	teamid,
+	name,
+	w AS total_wins,
+	yearid
+FROM teams
+WHERE wswin = 'Y' AND yearid BETWEEN 1970 AND 2016
+GROUP BY teamid, name, total_wins, yearid
+ORDER BY total_wins ASC;
+--LOS ANGELES DODGERS IN 1981 WITH 63 WINS
+
+--section three: why is it so low? something weird about that year? I suspect there were fewer games played entirely...
+SELECT 
+	yearid,
+	sum(g) AS total_games
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016
+GROUP BY yearid
+ORDER BY total_games ASC;
+--YO I WAS RIGHT yes, there were significantly fewer games played in general in 1981
+
+--section four: redo your query, excluding the problem year
+SELECT 
+	teamid,
+	name,
+	w AS total_wins,
+	yearid
+FROM teams
+WHERE wswin = 'Y' AND (yearid BETWEEN 1970 AND 1980 OR yearid BETWEEN 1982 AND 2016)
+GROUP BY teamid, name, total_wins, yearid
+ORDER BY total_wins ASC;
+--new lowest: St. Louis Cardinals in 2006 with 83 wins in the season
+
+--section five: How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+SELECT
+	teams.yearid,
+	teamid,
+	name,
+	w AS total_wins
+FROM teams
+INNER JOIN (
+			SELECT
+				DISTINCT yearid,
+				max(w) AS most_wins
+			FROM teams
+			GROUP BY yearid) AS maxsub
+ON teams.w = maxsub.most_wins
+WHERE wswin = 'Y' AND teams.yearid BETWEEN 1970 AND 2016
+GROUP BY teams.yearid, teamid, name, w
+ORDER BY yearid;
+
+--welp that didn't work take 2.. later 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
